@@ -107,6 +107,12 @@ module.exports = {
         patterns: ['src'],
       },
     ],
+    'prettier/prettier': [
+      'error',
+      {
+        endOfLine: 'auto',
+      },
+    ],
   },
   settings: {
     'import/parsers': {
