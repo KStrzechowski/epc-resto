@@ -1,22 +1,23 @@
-import { Controller, Get, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { OrdersService } from './orders.service';
+import { NewOrderItem } from './orders.entity';
 
 @Controller('orders')
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 
   @Post('/')
-  createOrder() {
-    // create a new order
+  async createOrder(@Body() orderItems: NewOrderItem[]) {
+    return this.ordersService.createOrder(orderItems);
   }
 
   @Get('/')
-  getOrders() {
-    // return all orders with status
+  async getOrders(@Query('status') status: string) {
+    return this.ordersService.getOrders(status);
   }
 
   @Get('/:orderId')
-  getOrder() {
-    // return order details
+  async getOrder(@Param('orderId') orderId: string) {
+    return this.ordersService.getOrder(orderId);
   }
 }
