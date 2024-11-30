@@ -3,6 +3,8 @@ import { v4 as uuid } from 'uuid';
 import { OrdersDataAccessLayer } from './orders.dal';
 import { NewOrder, NewOrderItem } from './orders.entity';
 import { MealsDataAccessLayer } from '@meals/meals.dal';
+import { GetOrdersQueryDto } from './dtos/get-orders.dto';
+import { CreateOrderDto, CreateOrderItemDto, GetOrderParamsDto } from './dtos';
 
 @Injectable()
 export class OrdersService {
@@ -11,28 +13,38 @@ export class OrdersService {
     private readonly mealsDataAccessLayer: MealsDataAccessLayer,
   ) {}
 
-  public async createOrder(orderItems: NewOrderItem[]) {
-    // create order based on order items
+  public async createOrder(body: CreateOrderDto) {
+    const { orderItems } = body;
+
     const totalPrice = await this.calculateTotalPrice(orderItems);
+
+    // create order
     const order: NewOrder = {
       id: uuid(),
       total_price: totalPrice,
     };
 
-    // assign valid order id to order items
-    orderItems.forEach((orderItem) => {
-      orderItem.order_id = order.id;
-    });
+    // create order items with valid order id to
+    const newOrderItems: NewOrderItem[] = orderItems.map((orderItem) => ({
+      order_id: order.id,
+      meal_id: orderItem.mealId,
+      quantity: orderItem.quantity,
+    }));
 
-    return this.ordersDataAccessLayer.createOrder(order, orderItems);
+    // save order and order items in database
+    return this.ordersDataAccessLayer.createOrder(order, newOrderItems);
   }
 
-  public async getOrders(status?: string) {
+  public async getOrders(query: GetOrdersQueryDto) {
+    const { status } = query;
+
     return this.ordersDataAccessLayer.getOrders(status);
   }
 
-  public async getOrder(id: string) {
-    const rows = await this.ordersDataAccessLayer.getOrder(id);
+  public async getOrder(params: GetOrderParamsDto) {
+    const { orderId } = params;
+
+    const rows = await this.ordersDataAccessLayer.getOrder(orderId);
 
     const orderItems = rows.map((row) => ({
       quantity: row.quantity,
@@ -48,14 +60,14 @@ export class OrdersService {
     };
   }
 
-  private async calculateTotalPrice(orderItems: NewOrderItem[]) {
+  private async calculateTotalPrice(orderItems: CreateOrderItemDto[]) {
     let totalPrice = 0;
 
-    const ids = orderItems.map((orderItem) => orderItem.meal_id);
+    const ids = orderItems.map((orderItem) => orderItem.mealId);
     const meals = await this.mealsDataAccessLayer.getMealsByIds(ids);
 
     for (const orderItem of orderItems) {
-      const meal = meals.find((meal) => meal.id === orderItem.meal_id);
+      const meal = meals.find((meal) => meal.id === orderItem.mealId);
 
       totalPrice += meal.price * orderItem.quantity;
     }

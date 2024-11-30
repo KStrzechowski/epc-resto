@@ -1,2 +1,2 @@
 export { Database } from './database';
-export { OrderStatus } from './order-status';
+export { PaginationDto } from './pagination.dto';

@@ -19,7 +19,7 @@
       "@categories/*": ["src/categories/*"],
       "@meals/*": ["src/meals/*"],
       "@orders/*": ["src/orders/*"],
-      "@config/*": ["src/config/*"],
+      "@config/*": ["src/config/*"]
     }
   },
   "include": ["src"],

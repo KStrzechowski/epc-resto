@@ -16,6 +16,7 @@ export class MealsDataAccessLayer extends Database {
       ) M
       JOIN ${CATEGORIES_TABLE} C ON M.category_id = C.id
     `;
+
     const values = categoryId ? [categoryId] : [];
 
     const result = await this.pg.query(sqlQuery, values);
@@ -28,7 +29,7 @@ export class MealsDataAccessLayer extends Database {
     SELECT id, price FROM ${MEALS_TABLE}
     WHERE id = ANY($1)
   `;
-    console.log(ids);
+
     const result = await this.pg.query(sqlQuery, [ids]);
 
     return result.rows;
