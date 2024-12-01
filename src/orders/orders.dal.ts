@@ -1,13 +1,47 @@
 import { Injectable } from '@nestjs/common';
 import { Database } from '../types/database';
-import { NewOrder, NewOrderItem } from './orders.entity';
+import { NewOrder, NewOrderItem, OrderStatus } from './orders.entity';
 import { MEALS_TABLE, ORDER_ITEMS_TABLE, ORDERS_TABLE } from '../constants';
 import { getInsertManyQuery, getInsertQuery } from '../helpers';
 
 @Injectable()
 export class OrdersDataAccessLayer extends Database {
+  public async getOrders(status?: string) {
+    const sqlQuery = `
+      SELECT * from ${ORDERS_TABLE}
+      ${status ? 'WHERE status = $1' : ''}
+    `;
+    const values = status ? [status] : [];
+
+    const result = await this.pg.query(sqlQuery, values);
+
+    return result.rows;
+  }
+
+  public async getOrder(id: string) {
+    const result = await this.pg.query(
+      `SELECT 
+        O.id AS id,
+        O.status AS status,
+        O.total_price AS total_price,
+        OI.quantity AS quantity,
+        M.name AS meal_name,
+        M.price AS price
+      FROM (
+        SELECT * 
+        FROM ${ORDERS_TABLE}
+        WHERE id = $1 
+      ) O
+      JOIN ${ORDER_ITEMS_TABLE} OI ON O.id = OI.order_id
+      JOIN ${MEALS_TABLE} M ON OI.meal_id = M.id`,
+      [id],
+    );
+
+    return result.rows;
+  }
+
   public async createOrder(order: NewOrder, orderItems: NewOrderItem[]) {
-    let orderResult = { rows: [] };
+    let orderResult;
     // get query and field values for order insert
     const insertOrderQuery = await getInsertQuery(ORDERS_TABLE, order);
 
@@ -26,7 +60,7 @@ export class OrdersDataAccessLayer extends Database {
         ORDER_ITEMS_TABLE,
         orderItems,
       );
-      console.log(insertOrderItemQuery);
+
       // save order items
       await client.query(
         insertOrderItemQuery.query,
@@ -44,38 +78,14 @@ export class OrdersDataAccessLayer extends Database {
     return orderResult.rows[0];
   }
 
-  public async getOrders(status?: string) {
-    const sqlQuery = `
-      SELECT * from ${ORDERS_TABLE}
-      ${status ? 'WHERE status = $1' : ''}
-    `;
-    const values = status ? [status] : [];
-
-    const result = await this.pg.query(sqlQuery, values);
-
-    return result.rows;
-  }
-
-  public async getOrder(id: string) {
+  public async updateOrderStatus(orderId: string, status: OrderStatus) {
     const result = await this.pg.query(
-      `
-      SELECT 
-        O.id AS id,
-        O.status AS status,
-        O.total_price AS total_price,
-        OI.quantity AS quantity,
-        M.name AS meal_name,
-        M.price AS price
-      FROM (
-        SELECT * 
-        FROM ${ORDERS_TABLE}
-        WHERE id = $1 
-      ) O
-      JOIN ${ORDER_ITEMS_TABLE} OI ON O.id = OI.order_id
-      JOIN ${MEALS_TABLE} M ON OI.meal_id = M.id`,
-      [id],
+      `UPDATE ${ORDERS_TABLE}
+      SET status = $1
+      WHERE id = $2`,
+      [status, orderId],
     );
 
-    return result.rows;
+    return result.rows[0];
   }
 }

@@ -1,5 +1,3 @@
-import { Meal } from '@meals/meals.entity';
-
 export interface NewOrder {
   id: string;
   total_price: number;
@@ -13,15 +11,21 @@ export interface NewOrderItem {
 
 export interface Order {
   id: string;
-  total_price: number;
   status: OrderStatus;
+  total_price: number;
 }
 
 export interface OrderItem {
-  id: number;
-  order: Order;
-  meal: Meal;
+  meal_name: string;
+  price: number;
   quantity: number;
+}
+
+export interface OrderWithItems {
+  id: string;
+  status: OrderStatus;
+  total_price: number;
+  order_items: OrderItem[];
 }
 
 export enum OrderStatus {

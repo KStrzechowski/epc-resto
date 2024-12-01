@@ -1,7 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { v4 as uuid } from 'uuid';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
+import {
+  NewOrder,
+  NewOrderItem,
+  Order,
+  OrderStatus,
+  OrderWithItems,
+} from './orders.entity';
 import { OrdersDataAccessLayer } from './orders.dal';
-import { NewOrder, NewOrderItem } from './orders.entity';
 import { MealsDataAccessLayer } from '@meals/meals.dal';
 import { GetOrdersQueryDto } from './dtos/get-orders.dto';
 import { CreateOrderDto, CreateOrderItemDto, GetOrderParamsDto } from './dtos';
@@ -9,11 +17,37 @@ import { CreateOrderDto, CreateOrderItemDto, GetOrderParamsDto } from './dtos';
 @Injectable()
 export class OrdersService {
   constructor(
+    @InjectQueue('orders') private readonly ordersQueue: Queue,
     private readonly ordersDataAccessLayer: OrdersDataAccessLayer,
     private readonly mealsDataAccessLayer: MealsDataAccessLayer,
   ) {}
 
-  public async createOrder(body: CreateOrderDto) {
+  public async getOrders(query: GetOrdersQueryDto): Promise<Order[]> {
+    const { status } = query;
+
+    return this.ordersDataAccessLayer.getOrders(status);
+  }
+
+  public async getOrder(params: GetOrderParamsDto): Promise<OrderWithItems> {
+    const { orderId } = params;
+
+    const rows = await this.ordersDataAccessLayer.getOrder(orderId);
+
+    const orderItems = rows.map((row) => ({
+      quantity: row.quantity,
+      price: row.price,
+      meal_name: row.meal_name,
+    }));
+
+    return {
+      id: rows[0].id,
+      status: rows[0].status,
+      total_price: rows[0].total_price,
+      order_items: orderItems,
+    };
+  }
+
+  public async createOrder(body: CreateOrderDto): Promise<OrderWithItems> {
     const { orderItems } = body;
 
     const totalPrice = await this.calculateTotalPrice(orderItems);
@@ -32,32 +66,22 @@ export class OrdersService {
     }));
 
     // save order and order items in database
-    return this.ordersDataAccessLayer.createOrder(order, newOrderItems);
+    await this.ordersDataAccessLayer.createOrder(order, newOrderItems);
+
+    const orderWithItems: OrderWithItems = await this.getOrder({
+      orderId: order.id,
+    });
+
+    await this.ordersQueue.add(orderWithItems.status, orderWithItems);
+
+    return orderWithItems;
   }
 
-  public async getOrders(query: GetOrdersQueryDto) {
-    const { status } = query;
-
-    return this.ordersDataAccessLayer.getOrders(status);
-  }
-
-  public async getOrder(params: GetOrderParamsDto) {
-    const { orderId } = params;
-
-    const rows = await this.ordersDataAccessLayer.getOrder(orderId);
-
-    const orderItems = rows.map((row) => ({
-      quantity: row.quantity,
-      price: row.price,
-      meal_name: row.meal_name,
-    }));
-
-    return {
-      id: rows[0].id,
-      status: rows[0].status,
-      total_price: rows[0].total_price,
-      orderItems,
-    };
+  public async updateOrderStatus(
+    orderId: string,
+    status: OrderStatus,
+  ): Promise<Order> {
+    return this.ordersDataAccessLayer.updateOrderStatus(orderId, status);
   }
 
   private async calculateTotalPrice(orderItems: CreateOrderItemDto[]) {

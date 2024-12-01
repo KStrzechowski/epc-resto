@@ -6,11 +6,6 @@ import { CreateOrderDto, GetOrderParamsDto, GetOrdersQueryDto } from './dtos';
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 
-  @Post('/')
-  async createOrder(@Body() body: CreateOrderDto) {
-    return this.ordersService.createOrder(body);
-  }
-
   @Get('/')
   async getOrders(@Query() query: GetOrdersQueryDto) {
     return this.ordersService.getOrders(query);
@@ -19,5 +14,10 @@ export class OrdersController {
   @Get('/:orderId')
   async getOrder(@Param() params: GetOrderParamsDto) {
     return this.ordersService.getOrder(params);
+  }
+
+  @Post('/')
+  async createOrder(@Body() body: CreateOrderDto) {
+    return this.ordersService.createOrder(body);
   }
 }
