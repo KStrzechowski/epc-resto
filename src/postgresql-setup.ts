@@ -1,5 +1,5 @@
 import { Pool } from 'pg';
-import POOL_CONFIG from '@config/postgresql.config';
+import POOL_CONFIG from './config/postgresql.config';
 
 export class PostgreSQLPool {
   private static pool: Pool;

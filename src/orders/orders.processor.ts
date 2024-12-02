@@ -21,7 +21,7 @@ export class OrdersProcessor extends WorkerHost {
   async process(job: Job) {
     if (!isEnumValue(OrderStatus, job.name)) {
       this.logger.warn('Incorrect order status');
-      throw new Error('Bad order status');
+      throw new Error('Incorrect order status');
     }
 
     const orderWithItems: OrderWithItems = job.data;

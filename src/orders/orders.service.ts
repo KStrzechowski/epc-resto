@@ -10,7 +10,7 @@ import {
   OrderWithItems,
 } from './orders.entity';
 import { OrdersDataAccessLayer } from './orders.dal';
-import { MealsDataAccessLayer } from '@meals/meals.dal';
+import { MealsDataAccessLayer } from '../meals/meals.dal';
 import { GetOrdersQueryDto } from './dtos/get-orders.dto';
 import { CreateOrderDto, CreateOrderItemDto, GetOrderParamsDto } from './dtos';
 
@@ -84,7 +84,7 @@ export class OrdersService {
     return this.ordersDataAccessLayer.updateOrderStatus(orderId, status);
   }
 
-  private async calculateTotalPrice(orderItems: CreateOrderItemDto[]) {
+  public async calculateTotalPrice(orderItems: CreateOrderItemDto[]) {
     let totalPrice = 0;
 
     const ids = orderItems.map((orderItem) => orderItem.mealId);
@@ -93,7 +93,7 @@ export class OrdersService {
     for (const orderItem of orderItems) {
       const meal = meals.find((meal) => meal.id === orderItem.mealId);
 
-      totalPrice += meal.price * orderItem.quantity;
+      totalPrice += Math.round(meal.price * orderItem.quantity * 100) / 100;
     }
 
     return totalPrice;
