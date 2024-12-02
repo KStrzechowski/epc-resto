@@ -5,8 +5,9 @@ import {
   SubscribeMessage,
   MessageBody,
   WebSocketServer,
+  ConnectedSocket,
 } from '@nestjs/websockets';
-import { Server } from 'socket.io';
+import { Server, Socket } from 'socket.io';
 import { Injectable, Logger } from '@nestjs/common';
 import { OrderStatus, OrderWithItems } from './orders.entity';
 import { OrdersService } from './orders.service';
@@ -28,42 +29,55 @@ export class OrdersGateway {
   }
 
   @SubscribeMessage(OrderStatus.NEW)
-  async handleExitNewEvent(@MessageBody() orderId: string) {
+  async handleExitNewEvent(
+    @MessageBody() orderId: string,
+    @ConnectedSocket() client: Socket,
+  ) {
     const order = await this.ordersService.getOrder({ orderId });
 
-    if (this.validateOrderStatus(order, OrderStatus.NEW)) {
+    if (this.validateOrderStatus(client, order, OrderStatus.NEW)) {
       this.ordersQueue.add(OrderStatus.IN_THE_KITCHEN, order);
     }
   }
 
   @SubscribeMessage(OrderStatus.IN_THE_KITCHEN)
-  async handleExitKitchenEvent(@MessageBody() orderId: string) {
+  async handleExitKitchenEvent(
+    @MessageBody() orderId: string,
+    @ConnectedSocket() client: Socket,
+  ) {
     const order = await this.ordersService.getOrder({ orderId });
 
-    if (this.validateOrderStatus(order, OrderStatus.IN_THE_KITCHEN)) {
+    if (this.validateOrderStatus(client, order, OrderStatus.IN_THE_KITCHEN)) {
       this.ordersQueue.add(OrderStatus.IN_DELIVERY, order);
     }
   }
 
   @SubscribeMessage(OrderStatus.IN_DELIVERY)
-  async handleExitDeliveryEvent(@MessageBody() orderId: string) {
+  async handleExitDeliveryEvent(
+    @MessageBody() orderId: string,
+    @ConnectedSocket() client: Socket,
+  ) {
     const order = await this.ordersService.getOrder({ orderId });
 
-    if (this.validateOrderStatus(order, OrderStatus.IN_DELIVERY)) {
+    if (this.validateOrderStatus(client, order, OrderStatus.IN_DELIVERY)) {
       this.ordersQueue.add(OrderStatus.DONE, order);
     }
   }
 
-  private validateOrderStatus(order: OrderWithItems, orderStatus: OrderStatus) {
+  private validateOrderStatus(
+    client: Socket,
+    order: OrderWithItems,
+    orderStatus: OrderStatus,
+  ) {
     if (!order) {
       this.logger.warn(`Order not found`);
-      this.server.emit('statusError', `Order not found`);
+      client.emit('statusError', `Order not found`);
       return false;
     }
 
     if (order.status !== orderStatus) {
       this.logger.warn(`Incorrect order status`);
-      this.server.emit(
+      client.emit(
         'statusError',
         `Order with id "${order.id}" has status "${order.status}"`,
       );
