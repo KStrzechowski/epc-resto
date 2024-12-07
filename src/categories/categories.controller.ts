@@ -8,7 +8,7 @@ export class CategoriesController {
   constructor(private readonly categoriesService: CategoriesService) {}
 
   @Get('/')
-  getCategories() {
-    // return available meal categories
+  async getCategories() {
+    return await this.categoriesService.getCategories();
   }
 }

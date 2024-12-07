@@ -6,6 +6,7 @@ import { OrdersModule } from '@orders/orders.module';
 import { MealsModule } from '@meals/meals.module';
 import { CategoriesModule } from '@categories/categories.module';
 import { ConfigNames } from '@config/config-names.enum';
+import { WebsocketModule } from './websockets/websockets.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { ConfigNames } from '@config/config-names.enum';
     OrdersModule,
     MealsModule,
     CategoriesModule,
+    WebsocketModule,
   ],
 })
 export class AppModule {}
